@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Book Detail</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header>
+    <a href="/index.html" class="headerBrand">Book Manager</a>
+    <nav>
+      <a href="/books/list.html">Books</a>
+      <a href="/books/form.html">New Book</a>
+      <a href="/logout">Logout</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Book Detail</h1>
+    <div id="err" class="error"></div>
+    <div id="box">
+      <p><b>Title:</b> <span id="title"></span></p>
+      <p><b>Author:</b> <span id="author"></span></p>
+      <p><b>Year:</b> <span id="year"></span></p>
+      <p><b>Tags:</b> <span id="tags"></span></p>
+    </div>
+
+    <div class="actions">
+      <a id="editLink" class="btn" href="#">Edit</a>
+      <a class="btn" href="/books/list.html">Back</a>
+    </div>
+  </main>
+
+  <footer>&copy; <script>document.write(new Date().getFullYear())</script> Book Manager</footer>
+
+  <script>
+    const err = document.getElementById('err');
+    const titleEl = document.getElementById('title');
+    const authorEl = document.getElementById('author');
+    const yearEl = document.getElementById('year');
+    const tagsEl = document.getElementById('tags');
+    const editLink = document.getElementById('editLink');
+
+    function getId() {
+      const u = new URL(location.href);
+      return u.searchParams.get('id');
+    }
+
+    async function load() {
+      err.style.display = 'none';
+      const id = getId();
+      if (!id) {
+        err.textContent = 'Missing id parameter.';
+        err.style.display = 'block';
+        return;
+      }
+      try {
+        const res = await fetch(`/api/books/${encodeURIComponent(id)}`);
+        if (!res.ok) throw new Error(`GET /api/books/${id} failed: ${res.status}`);
+        const b = await res.json();
+        titleEl.textContent = b.title ?? '';
+        authorEl.textContent = b.author ?? '';
+        yearEl.textContent = b.year ?? '';
+        tagsEl.textContent = Array.isArray(b.tags) ? b.tags.join(', ') : '';
+        editLink.href = `/books/form.html?id=${encodeURIComponent(id)}`;
+      } catch (e) {
+        err.textContent = e.message;
+        err.style.display = 'block';
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

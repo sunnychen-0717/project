@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header>
+    <a href="/index.html" class="headerBrand">Book Manager</a>
+    <nav>
+      <a href="/books/list.html">Books</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Login</h1>
+    <form action="/login" method="post" style="max-width: 360px;">
+      <div class="row">
+        <label>Username</label>
+        <input type="text" name="name" required />
+      </div>
+      <div class="row">
+        <label>Password</label>
+        <input type="password" name="password" required />
+      </div>
+      <div class="actions">
+        <button type="submit" class="btn">Login</button>
+        <a class="btn" href="/index.html">Cancel</a>
+      </div>
+    </form>
+    <p style="margin-top:12px; color:#666;">Try demo users like developer/developer or guest/guest (if seeded).</p>
+  </main>
+
+  <footer>&copy; <script>document.write(new Date().getFullYear())</script> Book Manager</footer>
+</body>
+</html>

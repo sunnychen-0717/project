@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Books</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header>
+    <a href="/index.html" class="headerBrand">Book Manager</a>
+    <nav>
+      <a href="/books/form.html">New Book</a>
+      <a href="/login.html">Login</a>
+      <a href="/logout">Logout</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>My Books</h1>
+
+    <form id="searchForm" class="row" style="margin-bottom:1rem">
+      <div class="row">
+        <label>Search title/author</label>
+        <input type="text" name="q" placeholder="e.g., Dune or Herbert" />
+      </div>
+      <div class="row">
+        <label>Tag</label>
+        <input type="text" name="tag" placeholder="e.g., scifi" />
+      </div>
+      <div class="row" style="display:flex; gap:12px; align-items:flex-end;">
+        <div style="flex:1">
+          <label>Year min</label>
+          <input type="number" name="yearMin" placeholder="e.g., 1950" />
+        </div>
+        <div style="flex:1">
+          <label>Year max</label>
+          <input type="number" name="yearMax" placeholder="e.g., 2025" />
+        </div>
+        <div>
+          <button class="btn" type="submit">Search</button>
+        </div>
+      </div>
+    </form>
+
+    <div id="msg" class="notice"></div>
+    <div id="err" class="error"></div>
+
+    <table>
+      <thead>
+        <tr><th>Title</th><th>Author</th><th>Year</th><th>Tags</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="rows">
+        <tr><td colspan="5">Loading…</td></tr>
+      </tbody>
+    </table>
+  </main>
+
+  <footer>&copy; <script>document.write(new Date().getFullYear())</script> Book Manager</footer>
+
+  <script>
+    const rows = document.getElementById('rows');
+    const form = document.getElementById('searchForm');
+    const msg = document.getElementById('msg');
+    const err = document.getElementById('err');
+
+    function show(el, text) {
+      el.textContent = text;
+      el.style.display = text ? 'block' : 'none';
+    }
+
+    function queryString(params) {
+      const usp = new URLSearchParams(params);
+      return usp.toString() ? `?${usp.toString()}` : '';
+    }
+
+    async function load(params = {}) {
+      show(msg, '');
+      show(err, '');
+      rows.innerHTML = '<tr><td colspan="5">Loading…</td></tr>';
+      try {
+        const qs = queryString(params);
+        const res = await fetch(`/api/books${qs}`);
+        if (!res.ok) throw new Error(`GET /api/books failed: ${res.status}`);
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length === 0) {
+          rows.innerHTML = '<tr><td colspan="5">No data</td></tr>';
+          return;
+        }
+        rows.innerHTML = '';
+        data.forEach(b => {
+          const tr = document.createElement('tr');
+          const tags = Array.isArray(b.tags) ? b.tags.join(', ') : '';
+          tr.innerHTML = `
+            <td><a href="/books/detail.html?id=${encodeURIComponent(b._id)}">${b.title ?? ''}</a></td>
+            <td>${b.author ?? ''}</td>
+            <td>${b.year ?? ''}</td>
+            <td>${tags}</td>
+            <td>
+              <a href="/books/form.html?id=${encodeURIComponent(b._id)}">Edit</a>
+              <button data-id="${b._id}" class="del" style="margin-left:8px">Delete</button>
+            </td>
+          `;
+          rows.appendChild(tr);
+        });
+      } catch (e) {
+        show(err, e.message);
+        rows.innerHTML = '<tr><td colspan="5">Error loading data</td></tr>';
+      }
+    }
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const params = Object.fromEntries(fd.entries());
+      load(params);
+    });
+
+    rows.addEventListener('click', async e => {
+      if (e.target.classList.contains('del')) {
+        const id = e.target.dataset.id;
+        if (!confirm('Delete this book?')) return;
+        try {
+          const res = await fetch(`/api/books/${encodeURIComponent(id)}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error(`DELETE failed: ${res.status}`);
+          show(msg, 'Deleted successfully.');
+          const params = Object.fromEntries(new FormData(form).entries());
+          load(params);
+        } catch (ex) {
+          show(err, ex.message);
+        }
+      }
+    });
+
+    load();
+  </script>
+</body>
+</html>

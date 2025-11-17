@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Book Form</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header>
+    <a href="/index.html" class="headerBrand">Book Manager</a>
+    <nav>
+      <a href="/books/list.html">Books</a>
+      <a href="/logout">Logout</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1 id="pageTitle">New Book</h1>
+
+    <div id="msg" class="notice"></div>
+    <div id="err" class="error"></div>
+
+    <form id="bookForm" autocomplete="off">
+      <div class="row">
+        <label>Title</label>
+        <input id="title" name="title" required />
+      </div>
+      <div class="row">
+        <label>Author</label>
+        <input id="author" name="author" required />
+      </div>
+      <div class="row">
+        <label>Year</label>
+        <input id="year" name="year" type="number" min="0" max="3000" />
+      </div>
+      <div class="row">
+        <label>Tags (comma separated)</label>
+        <input id="tags" name="tags" placeholder="e.g., scifi, classic" />
+      </div>
+      <div class="actions">
+        <button type="submit" class="btn">Save</button>
+        <a href="/books/list.html" class="btn">Cancel</a>
+      </div>
+    </form>
+  </main>
+
+  <footer>&copy; <script>document.write(new Date().getFullYear())</script> Book Manager</footer>
+
+  <script>
+    const pageTitle = document.getElementById('pageTitle');
+    const form = document.getElementById('bookForm');
+    const msg = document.getElementById('msg');
+    const err = document.getElementById('err');
+
+    const titleEl = document.getElementById('title');
+    const authorEl = document.getElementById('author');
+    const yearEl = document.getElementById('year');
+    const tagsEl = document.getElementById('tags');
+
+    function getId() {
+      const u = new URL(location.href);
+      return u.searchParams.get('id');
+    }
+
+    function show(el, text) {
+      el.textContent = text;
+      el.style.display = text ? 'block' : 'none';
+    }
+
+    async function loadIfEdit() {
+      const id = getId();
+      if (!id) return;
+      pageTitle.textContent = 'Edit Book';
+      try {
+        const res = await fetch(`/api/books/${encodeURIComponent(id)}`);
+        if (!res.ok) throw new Error(`GET /api/books/${id} failed: ${res.status}`);
+        const b = await res.json();
+        titleEl.value = b.title ?? '';
+        authorEl.value = b.author ?? '';
+        yearEl.value = b.year ?? '';
+        tagsEl.value = Array.isArray(b.tags) ? b.tags.join(', ') : '';
+      } catch (e) {
+        show(err, e.message);
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      show(msg, '');
+      show(err, '');
+      const payload = {
+        title: titleEl.value.trim(),
+        author: authorEl.value.trim(),
+        year: yearEl.value ? Number(yearEl.value) : undefined,
+        tags: tagsEl.value
+      };
+      const id = getId();
+      try {
+        let res;
+        if (id) {
+          res = await fetch(`/api/books/${encodeURIComponent(id)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) throw new Error(`PUT failed: ${res.status}`);
+          show(msg, 'Updated successfully.');
+        } else {
+          res = await fetch('/api/books', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) throw new Error(`POST failed: ${res.status}`);
+          show(msg, 'Created successfully.');
+          titleEl.value = '';
+          authorEl.value = '';
+          yearEl.value = '';
+          tagsEl.value = '';
+        }
+        setTimeout(() => location.href = '/books/list.html', 600);
+      } catch (ex) {
+        show(err, ex.message);
+      }
+    });
+
+    loadIfEdit();
+  </script>
+</body>
+</html>

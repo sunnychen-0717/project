@@ -1,0 +1,18 @@
+{
+"name": "book-manager",
+"version": "1.0.0",
+"description": "Express + Mongoose + EJS demo",
+"author": "Your Name",
+"dependencies": {
+"express": "^4.19.2",
+"ejs": "^3.1.9",
+"mongoose": "^7.6.0",
+"cookie-session": "^2.0.0",
+"body-parser": "^1.20.2",
+"method-override": "^3.0.0"
+},
+"scripts": {
+"start": "node server.js"
+},
+"engines": { "node": ">=14" }
+}
