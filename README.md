@@ -22,9 +22,7 @@ curl -i -c cookies.txt -X POST http://localhost:8099/login
 -H "Content-Type: application/x-www-form-urlencoded"
 --data "name=guest&password=guest"
 
-curl -i -X POST http://localhost:8099/api/books
--H "Content-Type: application/json"
--d '{"title":"The Pragmatic Programmer","author":"Andrew Hunt","year":1999,"tags":["software","craft"]}'
+curl -i -X POST http://localhost:8099/books -H "Content-Type: application/json" -d '{"title":"The Pragmatic Programmer","author":"Andrew Hunt","year":1999,"tags":["software","craft"]}'
 
 curl -X GET http://localhost:8099/books
 
