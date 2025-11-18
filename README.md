@@ -26,9 +26,7 @@ curl -i -b cookies.txt -X POST http://localhost:8099/api/books -H "Content-Type:
 
 curl -i -b cookies.txt http://localhost:8099/api/books
 
-curl -i -b cookies.txt -X PUT http://localhost:8099/api/books/edit \ 
-    -H "Content-Type: application/json" \ 
-    -d '{"title":"PragProg (20th)","author":"Andrew Hunt","year":2019,"tags":["software","craft"]}'
+curl -i -b cookies.txt -X PUT http://localhost:8099/api/books/edit -H "Content-Type: application/json" -d '{"title":"PragProg (20th)","author":"Andrew Hunt","year":2019,"tags":["software","craft"]}'
 
 curl -i -b cookies.txt -X DELETE http://localhost:8099/api/books/BOOK_ID    
 
