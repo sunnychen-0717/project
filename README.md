@@ -22,14 +22,14 @@ curl -i -c cookies.txt -X POST http://localhost:8099/login
 -H "Content-Type: application/x-www-form-urlencoded"
 --data "name=guest&password=guest"
 
-curl -i -X POST http://localhost:8099/books -H "Content-Type: application/json" -d '{"title":"The Pragmatic Programmer","author":"Andrew Hunt","year":1999,"tags":["software","craft"]}'
+curl -i -b cookies.txt -X POST http://localhost:8099/api/books \
+    -H "Content-Type: application/json" \
+    -d '{"title":"The Pragmatic Programmer","author":"Andrew Hunt","year":1999,"tags":["software","craft"]}'
 
-curl -X GET http://localhost:8099/books
+curl -i -b cookies.txt http://localhost:8099/api/books
 
-curl -X GET http://localhost:8099/books/BOOK_ID
+curl -i -b cookies.txt -X PUT http://localhost:8099/api/books/edit \
+    -H "Content-Type: application/json" \
+    -d '{"title":"PragProg (20th)","author":"Andrew Hunt","year":2019,"tags":["software","craft"]}'
 
-curl -X PUT http://localhost:8099/api/books/BOOK_ID
--H "Content-Type: application/json"
--d '{"title":"The Pragmatic Programmer (20th Anniversary)","author":"Andrew Hunt","year":2019,"tags":["software","craft"]}'
-
-curl -X DELETE http://localhost:8099/books/BOOK_ID
+curl -i -b cookies.txt -X DELETE http://localhost:8099/api/books/BOOK_ID    
