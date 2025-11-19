@@ -21,7 +21,7 @@ of your project.
 Login:  
 curl -i -c cookies.txt -X POST http://localhost:8099/login
 -H "Content-Type: application/x-www-form-urlencoded"
---data "name=guest&password=guest"
+--data "name=germany&password=germany"
 
 Create a book:  
 curl -i -b cookies.txt -X POST http://localhost:8099/api/books -H "Content-Type: application/json" -d '{"title":"The Pragmatic Programmer","author":"Andrew Hunt","year":1999,"tags":["software","craft"]}'
