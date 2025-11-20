@@ -3,7 +3,13 @@ Project infomation
 Project name:bookapp  
 Group no: 46  
 Group member:  
-Chen Cheuk Ngai 13822291  
+Chen Cheuk Ngai 13822291    
+NG Chun Pong 13319138  
+Leung Chun Ho 13724170  
+Wang ChenXi 13485478  
+
+
+
 
 
 
