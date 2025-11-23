@@ -1,9 +1,8 @@
 // server.js — Express + EJS + Mongoose + express-ejs-layouts + Secure Auth (Signup/Login)
 
 const CONFIG = {
-  MONGODB_URI:
-    process.env.MONGODB_URI ||
-    "mongodb+srv://s1382229_db_user:Zxcvbnm24354657@cluster0.m4nihdo.mongodb.net/?appName=Cluster0",
+  // Prefer env vars in production. Default to local Mongo in dev (no embedded secrets).
+  MONGODB_URI: process.env.MONGODB_URI || "mongodb://127.0.0.1:27017",
   DB_NAME: process.env.DB_NAME || "bookapp",
   SESSION_SECRET: process.env.SESSION_SECRET || "change_this_secret",
   PORT: process.env.PORT || 8099,
@@ -18,7 +17,6 @@ const methodOverride = require("method-override");
 const expressLayouts = require("express-ejs-layouts");
 const bcrypt = require("bcrypt");
 
-// Your local modules (ensure these files exist in production package)
 const User = require("./models/user");
 const Book = require("./models/book");
 const apiRouter = require("./routes/api");
@@ -43,18 +41,14 @@ app.use(
     keys: [CONFIG.SESSION_SECRET],
     httpOnly: true,
     sameSite: "lax",
-    secure: !!CONFIG.SESSION_SECURE,
+    secure: !!CONFIG.SESSION_SECURE, // set true behind HTTPS
     maxAge: 24 * 60 * 60 * 1000
   })
 );
 
 // Make username available to views
 app.use((req, res, next) => {
-  if (req.session && req.session.userId && req.session.username) {
-    res.locals.username = req.session.username;
-  } else {
-    res.locals.username = null;
-  }
+  res.locals.username = req.session?.username || null;
   next();
 });
 
@@ -67,26 +61,17 @@ function requireApiAuth(req, res, next) {
   return res.status(401).json({ error: "unauthorized" });
 }
 
-// Optional request/session debug
-app.use((req, res, next) => {
-  // console.log("DBG", req.method, req.path, { userId: req.session?.userId || null });
-  next();
-});
-
 // Mongo connection + seed (non-fatal if fails)
 (async () => {
   try {
-    const uri = CONFIG.MONGODB_URI;
-    const dbName = CONFIG.DB_NAME;
-    if (!uri) {
+    if (!CONFIG.MONGODB_URI) {
       console.warn("MONGODB_URI not set. Starting without database.");
       return;
     }
+    await mongoose.connect(CONFIG.MONGODB_URI, { dbName: CONFIG.DB_NAME });
+    console.log("Mongoose connected to", CONFIG.DB_NAME);
 
-    await mongoose.connect(uri, { dbName });
-    console.log("Mongoose connected to", dbName);
-
-    // Seed a demo user if not exists
+    // Seed a demo user if not exists (case-insensitive check)
     const existing = await User.findOne({ usernameLower: "guest" });
     if (!existing) {
       const passwordHash = await bcrypt.hash("guest", 12);
@@ -95,7 +80,6 @@ app.use((req, res, next) => {
     }
   } catch (err) {
     console.error("Mongo connection error (non-fatal):", err);
-    // Do not exit; app can still serve non-DB routes/health checks
   }
 })();
 
@@ -103,13 +87,13 @@ app.use((req, res, next) => {
 
 // Home
 app.get("/", (req, res) => {
-  if (req.session && req.session.userId) return res.redirect("/books");
+  if (req.session?.userId) return res.redirect("/books");
   res.render("index", { title: "Home" });
 });
 
 // Auth pages
 app.get("/signup", (req, res) => {
-  if (req.session && req.session.userId) return res.redirect("/books");
+  if (req.session?.userId) return res.redirect("/books");
   res.render("auth/signup", { title: "Sign up", error: null, name: "" });
 });
 
@@ -137,22 +121,18 @@ app.post("/signup", async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
     let user;
     try {
-      // usernameLower is set by the model hook
+      // usernameLower is set by the model pre-validate hook
       user = await User.create({ username: trimmed, passwordHash });
     } catch (err) {
+      // Duplicate key (e.g., usernameLower unique hit)
       if (err && (err.code === 11000 || err.code === 11001)) {
-        console.error("Signup duplicate key:", {
-          message: err.message,
-          keyValue: err.keyValue,
-          code: err.code
-        });
         return res.status(409).render("auth/signup", {
           title: "Sign up",
           error: "Username is already taken.",
           name: trimmed
         });
       }
-      if (err && err.name === "ValidationError") {
+      if (err?.name === "ValidationError") {
         return res.status(400).render("auth/signup", {
           title: "Sign up",
           error: Object.values(err.errors)
@@ -184,7 +164,7 @@ app.post("/signup", async (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  if (req.session && req.session.userId) return res.redirect("/books");
+  if (req.session?.userId) return res.redirect("/books");
   res.render("auth/login", { title: "Login", error: null, name: "" });
 });
 
@@ -430,7 +410,7 @@ openApi.post("/signup", async (req, res) => {
       if (err && (err.code === 11000 || err.code === 11001)) {
         return res
           .status(409)
-          .json({ error: "conflict", message: "username_taken", keyValue: err.keyValue || null });
+          .json({ error: "conflict", message: "username_taken" });
       }
       if (err?.name === "ValidationError") {
         return res.status(400).json({ error: "validation_failed" });
@@ -450,10 +430,9 @@ openApi.post("/signup", async (req, res) => {
 
 // Optional: username availability check (case-insensitive)
 openApi.get("/username-available", async (req, res) => {
-  const u = (req.query.u || "").trim().toLowerCase();
-  if (!u || u.length < 2) return res.json({ available: false, reason: "too_short" });
-  const exists = await User.exists({ usernameLower: u });
-  res.json({ available: !exists });
+  const u = (req.query.u || "").trim();
+  const available = await User.isUsernameAvailable(u);
+  res.json({ available });
 });
 
 app.use("/api", openApi);
@@ -480,7 +459,7 @@ app.post("/__debug/clear", (req, res) => {
 // List users (dev only)
 app.get("/__debug/users", async (req, res) => {
   try {
-    const users = await User.find({}, { username: 1 }).lean();
+    const users = await User.find({}, { username: 1, usernameLower: 1 }).lean();
     res.json(users);
   } catch (e) {
     res.status(500).json({ error: "failed_to_list_users" });
@@ -497,7 +476,7 @@ app.get("/__debug/user-indexes", async (req, res) => {
   }
 });
 
-// Start server — bind to 0.0.0.0 and prefer Azure's PORT
+// Start server — bind to 0.0.0.0 and prefer platform PORT
 const PORT = Number(process.env.PORT) || Number(CONFIG.PORT) || 8099;
 const HOST = "0.0.0.0";
 app.listen(PORT, HOST, () => {
