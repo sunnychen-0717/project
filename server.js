@@ -1,8 +1,8 @@
 // server.js — Express + EJS + Mongoose + express-ejs-layouts + Secure Auth (Signup/Login)
 
 const CONFIG = {
-  // Prefer env vars in production. Default to local Mongo in dev (no embedded secrets).
-  MONGODB_URI: process.env.MONGODB_URI || "mongodb+srv://s1382229_db_user:Zxcvbnm24354657@cluster0.m4nihdo.mongodb.net/?appName=Cluster0",
+  // Use env vars in production. Default to local Mongo in dev (no embedded secrets).
+  MONGODB_URI: process.env.MONGODB_URI || "mongodb://127.0.0.1:27017",
   DB_NAME: process.env.DB_NAME || "bookapp",
   SESSION_SECRET: process.env.SESSION_SECRET || "change_this_secret",
   PORT: process.env.PORT || 8099,
@@ -41,7 +41,7 @@ app.use(
     keys: [CONFIG.SESSION_SECRET],
     httpOnly: true,
     sameSite: "lax",
-    secure: !!CONFIG.SESSION_SECURE, // set true behind HTTPS
+    secure: !!CONFIG.SESSION_SECURE, // set true when served over HTTPS or behind a proxy
     maxAge: 24 * 60 * 60 * 1000
   })
 );
@@ -80,6 +80,7 @@ function requireApiAuth(req, res, next) {
     }
   } catch (err) {
     console.error("Mongo connection error (non-fatal):", err);
+    // App can still serve non-DB routes/health checks
   }
 })();
 
@@ -121,11 +122,11 @@ app.post("/signup", async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
     let user;
     try {
-      // usernameLower is set by the model pre-validate hook
+      // usernameLower is set by the model hook
       user = await User.create({ username: trimmed, passwordHash });
     } catch (err) {
-      // Duplicate key (e.g., usernameLower unique hit)
       if (err && (err.code === 11000 || err.code === 11001)) {
+        // Duplicate key on usernameLower unique index
         return res.status(409).render("auth/signup", {
           title: "Sign up",
           error: "Username is already taken.",
@@ -384,8 +385,9 @@ app.get("/api/books", async (req, res) => {
   res.json(results);
 });
 
-// Open API signup (JSON)
+// Open API (no auth required for signup/availability)
 const openApi = express.Router();
+
 openApi.post("/signup", async (req, res) => {
   try {
     const raw = req.body?.username ?? req.body?.name ?? "";
@@ -415,6 +417,7 @@ openApi.post("/signup", async (req, res) => {
       if (err?.name === "ValidationError") {
         return res.status(400).json({ error: "validation_failed" });
       }
+      console.error("API signup DB error:", err);
       return res.status(500).json({ error: "internal_error" });
     }
 
@@ -428,7 +431,7 @@ openApi.post("/signup", async (req, res) => {
   }
 });
 
-// Optional: username availability check (case-insensitive)
+// Username availability check (case-insensitive)
 openApi.get("/username-available", async (req, res) => {
   const u = (req.query.u || "").trim();
   const available = await User.isUsernameAvailable(u);
@@ -451,12 +454,6 @@ app.get("/__debug/session", (req, res) => {
     keys: Object.keys(req.session || {})
   });
 });
-app.post("/__debug/clear", (req, res) => {
-  req.session = null;
-  res.json({ cleared: true });
-});
-
-// List users (dev only)
 app.get("/__debug/users", async (req, res) => {
   try {
     const users = await User.find({}, { username: 1, usernameLower: 1 }).lean();
@@ -465,8 +462,6 @@ app.get("/__debug/users", async (req, res) => {
     res.status(500).json({ error: "failed_to_list_users" });
   }
 });
-
-// Show Mongo indexes for users collection (dev only)
 app.get("/__debug/user-indexes", async (req, res) => {
   try {
     const indexes = await mongoose.connection.db.collection("users").indexes();
