@@ -87,7 +87,7 @@ app.use((req, res, next) => {
     console.log("Mongoose connected to", dbName);
 
     // Seed a demo user if not exists
-    const existing = await User.findOne({ username: "guest" });
+    const existing = await User.findOne({ usernameLower: "guest" });
     if (!existing) {
       const passwordHash = await bcrypt.hash("guest", 12);
       await User.create({ username: "guest", passwordHash });
@@ -137,6 +137,7 @@ app.post("/signup", async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
     let user;
     try {
+      // usernameLower is set by the model hook
       user = await User.create({ username: trimmed, passwordHash });
     } catch (err) {
       if (err && (err.code === 11000 || err.code === 11001)) {
@@ -190,25 +191,26 @@ app.get("/login", (req, res) => {
 app.post("/login", async (req, res) => {
   const raw = req.body?.username ?? req.body?.name ?? "";
   const password = req.body?.password ?? "";
-  const username = raw.trim().normalize("NFKC");
+  const usernameInput = raw.trim().normalize("NFKC");
 
-  if (!username || username.length < 2) {
+  if (!usernameInput || usernameInput.length < 2) {
     return res
       .status(400)
-      .render("auth/login", { title: "Login", error: "Enter a valid username.", name: username });
+      .render("auth/login", { title: "Login", error: "Enter a valid username.", name: usernameInput });
   }
   if (!password) {
     return res
       .status(400)
-      .render("auth/login", { title: "Login", error: "Password is required.", name: username });
+      .render("auth/login", { title: "Login", error: "Password is required.", name: usernameInput });
   }
 
   try {
-    const user = await User.findOne({ username });
+    // Case-insensitive lookup using usernameLower
+    const user = await User.findOne({ usernameLower: usernameInput.toLowerCase() });
     if (!user) {
       return res
         .status(401)
-        .render("auth/login", { title: "Login", error: "Invalid username or password.", name: username });
+        .render("auth/login", { title: "Login", error: "Invalid username or password.", name: usernameInput });
     }
 
     if (!user.passwordHash) {
@@ -218,14 +220,14 @@ app.post("/login", async (req, res) => {
       });
       return res
         .status(500)
-        .render("auth/login", { title: "Login", error: "Account is misconfigured. Please contact support.", name: username });
+        .render("auth/login", { title: "Login", error: "Account is misconfigured. Please contact support.", name: usernameInput });
     }
 
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) {
       return res
         .status(401)
-        .render("auth/login", { title: "Login", error: "Invalid username or password.", name: username });
+        .render("auth/login", { title: "Login", error: "Invalid username or password.", name: usernameInput });
     }
 
     req.session.userId = user._id.toString();
@@ -235,7 +237,7 @@ app.post("/login", async (req, res) => {
     console.error("Login error:", e);
     return res
       .status(500)
-      .render("auth/login", { title: "Login", error: "Server error", name: username || "" });
+      .render("auth/login", { title: "Login", error: "Server error", name: usernameInput || "" });
   }
 });
 
@@ -430,6 +432,9 @@ openApi.post("/signup", async (req, res) => {
           .status(409)
           .json({ error: "conflict", message: "username_taken", keyValue: err.keyValue || null });
       }
+      if (err?.name === "ValidationError") {
+        return res.status(400).json({ error: "validation_failed" });
+      }
       return res.status(500).json({ error: "internal_error" });
     }
 
@@ -442,6 +447,15 @@ openApi.post("/signup", async (req, res) => {
     res.status(500).json({ error: "internal_error" });
   }
 });
+
+// Optional: username availability check (case-insensitive)
+openApi.get("/username-available", async (req, res) => {
+  const u = (req.query.u || "").trim().toLowerCase();
+  if (!u || u.length < 2) return res.json({ available: false, reason: "too_short" });
+  const exists = await User.exists({ usernameLower: u });
+  res.json({ available: !exists });
+});
+
 app.use("/api", openApi);
 
 // Auth-required API router
