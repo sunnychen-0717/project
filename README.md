@@ -53,20 +53,20 @@ npm start
 
 Curl command:  
 Login:  
-curl -i -c cookies.txt -X POST http://localhost:8099/login
+curl -i -c cookies.txt -X POST https://project-cnyy.onrender.com/login
 -H "Content-Type: application/x-www-form-urlencoded"
 --data "name=germany&password=germany"
 
 Create a book:  
-curl -i -b cookies.txt -X POST http://localhost:8099/api/books -H "Content-Type: application/json" -d '{"title":"The Pragmatic Programmer","author":"Andrew Hunt","year":1999,"tags":["software","craft"]}'
+curl -i -b cookies.txt -X POST https://project-cnyy.onrender.com/api/books -H "Content-Type: application/json" -d '{"title":"The Pragmatic Programmer","author":"Andrew Hunt","year":1999,"tags":["software","craft"]}'
 
 List the book:  
-curl -i -b cookies.txt http://localhost:8099/api/books
+curl -i -b cookies.txt https://project-cnyy.onrender.com/api/books
 
 Update the book:  
-curl -i -b cookies.txt -X PUT http://localhost:8099/api/books/edit -H "Content-Type: application/json" -d '{"title":"PragProg (20th)","author":"Andrew Hunt","year":2019,"tags":["software","craft"]}'
+curl -i -b cookies.txt -X PUT https://project-cnyy.onrender.com/api/books/edit -H "Content-Type: application/json" -d '{"title":"PragProg (20th)","author":"Andrew Hunt","year":2019,"tags":["software","craft"]}'
 
 Delete the book:  
-curl -i -b cookies.txt -X DELETE http://localhost:8099/api/books/BOOK_ID    
+curl -i -b cookies.txt -X DELETE https://project-cnyy.onrender.com/api/books/BOOK_ID   
 
 
