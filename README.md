@@ -25,9 +25,13 @@ Project file intro:
 
 
   
-The cloud-based server URL (your server host running on the cloud platform) for testing:  
+We are using render to build up a cloud-based server, there is the cloud-based server URL for testing:  
 http://localhost:8099  
-4. Operation guides (like a user flow) for your server
+
+
+
+
+Operation guides  server
 - Use of Login/Logout pages: a list of valid login information, sign-in steps? …
 - Use of your CRUD web pages: which button or UI is used to implement create, read,
 update, and delete?
@@ -45,10 +49,13 @@ Name:france
 Password:123456  
 
 How to run
+Run in local host:  
 download all the file, then run it in Terminal  
 cd project  
 npm install  
 npm start    
+
+Run in cloud-based server:  
 
 
 
